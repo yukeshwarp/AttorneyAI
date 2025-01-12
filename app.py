@@ -897,7 +897,7 @@ if uploaded_files:
                 header[1].text = "Trademark Status"
                 header[2].text = "Serial/Registration Number"
                 header[3].text = "Owner Name"
-                header[4].text = "Design/Work"
+                header[4].text = "Design/Word"
 
                 for result in results:
                     row = table.add_row().cells
@@ -910,7 +910,7 @@ if uploaded_files:
                     )
                     row[3].text = result["Trademark -_owner"]
                     row[4].text = (
-                        "Design" if result["Trademark design phrase"] else "Work"
+                        "Design" if result["Trademark design phrase"] else "Word"
                     )
 
         # Save the document to a BytesIO object
