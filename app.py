@@ -47,7 +47,7 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
 
-st.title("Page range extractor")
+st.title("AttorneyAI")
 
 uploaded_files = st.file_uploader(
     "Upload files less than 400 pages",
