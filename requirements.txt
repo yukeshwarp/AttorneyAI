@@ -1,7 +1,6 @@
 requests
 logging
 PyMuPDF
-re
 uuid
 redis
 openai
