@@ -19,7 +19,9 @@ from typing import List, Dict, Union
 from sentence_transformers import SentenceTransformer, util
 from fuzzywuzzy import fuzz
 from docx import Document
-
+from metaphone import doublemetaphone
+import re
+from nltk.stem import WordNetLemmatizer
 
 semantic_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
@@ -324,7 +326,6 @@ def compare_trademarks(
     def is_phonetically_equivalents(
         name1: str, name2: str, threshold: int = 80
     ) -> bool:
-        from metaphone import doublemetaphone
 
         dm_name1 = doublemetaphone(name1)
         dm_name2 = doublemetaphone(name2)
@@ -487,8 +488,6 @@ def compare_trademarks(
         cls in international_class_numbers for cls in proposed_classes
     )
 
-    import re
-    from nltk.stem import WordNetLemmatizer
 
     def normalize_text(text):
 
@@ -883,12 +882,12 @@ if uploaded_files:
 
             asyncio.run(process_trademarks())
 
+        # Create the document in memory
         doc = Document()
         for conflict_grade, results in comparison_results.items():
             count = len(results)
             doc.add_paragraph(f"{conflict_grade}: {count} entries")
 
-        for conflict_grade, results in comparison_results.items():
             if results:
                 doc.add_heading(conflict_grade, level=2)
                 table = doc.add_table(rows=1, cols=5)
@@ -913,7 +912,19 @@ if uploaded_files:
                         "Design" if result["Trademark design phrase"] else "Work"
                     )
 
-        # Save the document
-        output_file = f"AAAAnalysis.docx"
-        doc.save(output_file)
-        print(f"Trademark conflict analysis saved to {output_file}")
+        # Save the document to a BytesIO object
+        output = BytesIO()
+        doc.save(output)
+        output.seek(0)
+
+        # Streamlit app logic
+        st.title("Trademark Conflict Analysis")
+        st.write("Download the trademark conflict analysis document below.")
+
+        # Add a download button
+        st.download_button(
+            label="Download Analysis Document",
+            data=output,
+            file_name="Trademark_Conflict_Analysis.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
