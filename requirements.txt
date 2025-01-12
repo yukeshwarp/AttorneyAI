@@ -1,6 +1,5 @@
 requests
 logging
-os
 PyMuPDF
 ast
 re
