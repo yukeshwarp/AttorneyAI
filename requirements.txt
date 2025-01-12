@@ -10,3 +10,6 @@ pydantic
 sentence-transformers
 fuzzywuzzy
 python-docx
+phonetics
+Metaphone
+nltk
