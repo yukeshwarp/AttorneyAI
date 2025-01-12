@@ -22,7 +22,8 @@ from docx import Document
 from metaphone import doublemetaphone
 import re
 from nltk.stem import WordNetLemmatizer
-
+import nltk
+nltk.download('wordnet')
 semantic_model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 llm_api_key = os.getenv("AZURE_API_KEY")
