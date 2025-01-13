@@ -13,9 +13,8 @@ from openai import AzureOpenAI
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import tiktoken
-from pydantic import BaseModel, Field, ValidationError
-from typing import List, Dict, Union
-from typing import List, Dict, Union
+from pydantic import BaseModel, Field, ValidationError, validator
+from typing import List, Dict, Union, Optional
 from sentence_transformers import SentenceTransformer, util
 from fuzzywuzzy import fuzz
 from docx import Document
@@ -49,6 +48,36 @@ if "removed_documents" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
+class TrademarkDetails(BaseModel):
+    -_trademark_name: str
+    -_status: str
+    -_serial_number: Optional[str] = str
+    -_international_class_number: List[int]
+    -_goods_and_services: str
+    -_owner: str
+    -_filed_date: str
+    -_registration_number: Optional[str] = None
+    -_design_phrase: Optional[str] = None
+
+    @validator("filed_date")
+    def validate_filed_date(cls, value):
+        # Validate date format
+        from datetime import datetime
+        try:
+            datetime.strptime(value, "%b %d, %Y")
+        except ValueError:
+            raise ValueError(f"Invalid filed date format: {value}. Expected format is MMM DD, YYYY.")
+        return value
+
+    @validator("international_class_number", pre=True)
+    def validate_class_numbers(cls, value):
+        if isinstance(value, str):
+            # Convert string to list of integers
+            try:
+                return [int(num.strip()) for num in value.split(",")]
+            except ValueError:
+                raise ValueError("Invalid international class numbers. Expected a list of integers.")
+        return value
 
 st.title("AttorneyAI")
 
@@ -116,7 +145,7 @@ def compare_trademarks2(
             2. Determine if the trademarks are likely to cause confusion based on the Trademark name such as Phonetic match, Semantic similarity and String similarity.  
             3. Return the output with Conflict Grade only as 'Name-Match' or 'No-conflict', based on the reasoning.
             4. Provide reasoning for each Conflict Grade.
-            5. Special Case: If the existing trademark status is "Cancelled" or "Abandoned," it will automatically be considered as No-conflict  
+            5. Special Case: If the existing trademark status is "Cancelled" or "Abandoned," it will automatically be considered as Conflict Grade: No-conflict.  
            
             Output Format:
                 Existing Name: Name of the existing trademark.
@@ -708,8 +737,8 @@ if uploaded_files:
             "Moderate": [],
             "Name-Match": [],
             "Low": [],
+            "No-conflict": [],
         }
-        grades = ["High", "Moderate", "Name-Match", "Low"]
         st.write(extracted_pages)
         st.write(extracted_pages2)
         seen_records = set()  # To track unique trademark records
@@ -793,7 +822,7 @@ if uploaded_files:
                         api_key=llm_api_key,
                         api_version="2024-10-01-preview",
                     )
-
+            
                     messages = [
                         {
                             "role": "system",
@@ -803,7 +832,7 @@ if uploaded_files:
                             "role": "user",
                             "content": f"""
                             Extract the following details from the provided trademark document and present them in the exact format specified:  
-
+            
                             - Trademark Name  
                             - Status  
                             - Serial Number  
@@ -813,18 +842,18 @@ if uploaded_files:
                             - Filed Date (format: MMM DD, YYYY, e.g., Jun 14, 2024)  
                             - Registration Number  
                             - Design phrase
-
+            
                             Instructions:  
                             - Return the results in the following format, replacing the example data with the extracted information:
                             - Ensure the output matches this format precisely.  
                             - Do not include any additional text or explanations.  
-
+            
                             Document chunk to extract from:  
                             {document_chunk}  
                         """,
                         },
                     ]
-
+            
                     loop = asyncio.get_event_loop()
                     response = await loop.run_in_executor(
                         None,
@@ -832,22 +861,22 @@ if uploaded_files:
                             model="gpt-4o-mini", messages=messages, temperature=0
                         ),
                     )
-
+            
                     extracted_text = response.choices[0].message.content
                     details = {}
                     for line in extracted_text.split("\n"):
                         if ":" in line:
                             key, value = line.split(":", 1)
-                            details[key.strip().lower().replace(" ", "_")] = (
-                                value.strip()
-                            )
-
-                    return details
-
+                            details[key.strip().lower().replace(" ", "_")] = value.strip()
+            
+                    # Validate the extracted details using Pydantic
+                    trademark_details = TrademarkDetails(**details)
+                    return trademark_details.dict()
+            
                 except Exception as e:
                     logging.error(f"Error extracting trademark details: {e}")
                     return {"error": f"Error extracting trademark details: {str(e)}"}
-
+                    
             async def parallel_extraction():
                 tasks = []
                 for i in range(len(record)):
@@ -855,26 +884,28 @@ if uploaded_files:
                     if i == len(record) - 1:
                         end_page = start_page + 4
                     else:
-                        end_page = int(record[i + 1]["page-start"]) - 1
-
+                        end_page = int(record[i + 1]["page-start"])
+            
                     document_chunk = "\n".join(extracted_pages2[start_page:end_page])
                     tasks.append(extract_trademark_details(document_chunk))
-
+            
                 return await asyncio.gather(*tasks)
-
+            
             async def process_trademarks():
                 extracted_details = await parallel_extraction()
+                
             
-                proposed_name = "EXTRA DRY"
+                proposed_name = "SUPERGOOD SUPERFOODS"
                 proposed_class = "3"
-                proposed_goods_services = "ANTIPERSPIRANTS AND DEODORANTS"
+                proposed_goods_services = "VITAMIN AND MINERAL SUPPLEMENTS"
             
                 for details in extracted_details:
                     if not details or "error" in details:
                         continue
-                        
-                    reg_number = details.get("-_registration_number")
-                    serial_number = details.get("-_serial_number")
+            
+                    # Get unique identifiers
+                    reg_number = details.get("registration_number")
+                    serial_number = details.get("serial_number")
             
                     # Create a unique identifier for tracking
                     unique_id = (reg_number or "").strip(), (serial_number or "").strip()
@@ -892,10 +923,11 @@ if uploaded_files:
                     )
             
                     conflict_grade = comparision_result.get("conflict_grade")
-                    if (any(gr == conflict_grade for gr in grades)): 
-                        comparison_results[conflict_grade].append(comparision_result)
-                # Create Word document
-
+                    comparison_results[conflict_grade].append(comparision_result)
+            
+                # Create Word document (not implemented here)
+            
+            # Run the processing function
             asyncio.run(process_trademarks())
 
         # Create the document in memory
