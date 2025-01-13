@@ -708,8 +708,8 @@ if uploaded_files:
             "Moderate": [],
             "Name-Match": [],
             "Low": [],
-            "No-conflict": [],
         }
+        grades = ["High", "Moderate", "Name-Match", "Low"]
         st.write(extracted_pages)
         st.write(extracted_pages2)
         seen_records = set()  # To track unique trademark records
@@ -877,11 +877,11 @@ if uploaded_files:
                     serial_number = details.get("-_serial_number")
             
                     # Create a unique identifier for tracking
-                    unique_id = (reg_number or "").strip(), (serial_number or "").strip()
+                    #unique_id = (reg_number or "").strip(), (serial_number or "").strip()
             
                     # Skip if the record is a duplicate
-                    if unique_id in seen_records:
-                        continue
+                    # if unique_id in seen_records:
+                    #     continue
             
                     # Mark the record as seen
                     seen_records.add(unique_id)
@@ -892,7 +892,8 @@ if uploaded_files:
                     )
             
                     conflict_grade = comparision_result.get("conflict_grade")
-                    comparison_results[conflict_grade].append(comparision_result)
+                    if (any(gr == conflict_grade for gr in grades)): 
+                        comparison_results[conflict_grade].append(comparision_result)
                 # Create Word document
 
             asyncio.run(process_trademarks())
