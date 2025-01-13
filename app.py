@@ -121,7 +121,7 @@ def compare_trademarks2(
             Output Format:
                 Existing Name: Name of the existing trademark.
                 Reasoning: Reasoning.
-                Conflict Grade: Name-Match/No-conflict
+                Conflict Grade: conflict-grade.
         """,
         },
     ]
