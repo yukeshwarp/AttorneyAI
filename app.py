@@ -865,9 +865,9 @@ if uploaded_files:
             async def process_trademarks():
                 extracted_details = await parallel_extraction()
             
-                proposed_name = "GOOD HUMOR"
-                proposed_class = "33"
-                proposed_goods_services = "ALCOHOLIC BEVERAGES"
+                proposed_name = "EXTRA DRY"
+                proposed_class = "3"
+                proposed_goods_services = "ANTIPERSPIRANTS AND DEODORANTS"
             
                 for details in extracted_details:
                     if not details or "error" in details:
