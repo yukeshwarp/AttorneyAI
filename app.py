@@ -869,8 +869,6 @@ if uploaded_files:
                             key, value = line.split(":", 1)
                             details[key.strip().lower().replace(" ", "_")] = value.strip()
             
-                    # Validate the extracted details using Pydantic
-                    trademark_details = TrademarkDetails(**details)
                     return details
             
                 except Exception as e:
