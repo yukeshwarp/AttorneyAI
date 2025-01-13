@@ -108,8 +108,8 @@ def compare_trademarks2(
             - Name: "{proposed_name}"  
            
             Existing Trademarks:
-            - Name: "{existing_trademark['trademark_name']}"  
-            - Status: "{existing_trademark['status']}"
+            - Name: "{existing_trademark['-_trademark_name']}"  
+            - Status: "{existing_trademark['-_status']}"
            
             Instructions:
             1. Review the proposed and existing trademark data.  
@@ -171,19 +171,19 @@ def compare_trademarks(
 ) -> Dict[str, Union[str, int]]:
     # Convert proposed classes to a list of integers
     international_class_numbers = ast.literal_eval(
-        existing_trademark["international_class_number"]
+        existing_trademark["-_international_class_number"]
     )
     proposed_classes = [int(c.strip()) for c in proposed_class.split(",")]
     if not (any(cls in international_class_numbers for cls in proposed_classes)):
         conflict_grade = compare_trademarks2(existing_trademark, proposed_name, proposed_class, proposed_goods_services)
         return {
-        "Trademark name": existing_trademark["trademark_name"],
-        "Trademark status": existing_trademark["status"],
-        "Trademark owner": existing_trademark["owner"],
-        "Trademark class Number": existing_trademark["international_class_number"],
-        "Trademark serial number": existing_trademark["serial_number"],
-        "Trademark registration number": existing_trademark["registration_number"],
-        "Trademark design phrase": existing_trademark["design_phrase"],
+        "Trademark name": existing_trademark["-_trademark_name"],
+        "Trademark -_status": existing_trademark["-_status"],
+        "Trademark -_owner": existing_trademark["-_owner"],
+        "Trademark class Number": existing_trademark["-_international_class_number"],
+        "Trademark serial number": existing_trademark["-_serial_number"],
+        "Trademark registration number": existing_trademark["-_registration_number"],
+        "Trademark design phrase": existing_trademark["-_design_phrase"],
         "conflict_grade": conflict_grade,
         "reasoning": "reasoning",
     }
@@ -376,45 +376,45 @@ def compare_trademarks(
 
     # Condition 1A: Exact character-for-character match
     condition_1A_satisfied = (
-        existing_trademark["trademark_name"].strip().lower()
+        existing_trademark["-_trademark_name"].strip().lower()
         == proposed_name.strip().lower()
     )
 
     condition_1A_satisfieds = is_exact_match(
-        existing_trademark["trademark_name"].strip().lower(),
+        existing_trademark["-_trademark_name"].strip().lower(),
         proposed_name.strip().lower(),
     )
     st.write(f"Exact Match: {condition_1A_satisfieds}")
 
     # Condition 1B: Semantically equivalent
     condition_1B_satisfied = is_semantically_equivalent(
-        existing_trademark["trademark_name"], proposed_name
+        existing_trademark["-_trademark_name"], proposed_name
     )
 
     condition_1B_satisfieds = is_semantically_equivalents(
-        existing_trademark["trademark_name"].strip().lower(),
+        existing_trademark["-_trademark_name"].strip().lower(),
         proposed_name.strip().lower(),
     )
     st.write(f"Semantically equivalents : {condition_1B_satisfieds}")
 
     # Condition 1C: Phonetically equivalent
     condition_1C_satisfied = is_phonetically_equivalent(
-        existing_trademark["trademark_name"], proposed_name
+        existing_trademark["-_trademark_name"], proposed_name
     )
 
     condition_1C_satisfieds = is_phonetically_equivalents(
-        existing_trademark["trademark_name"], proposed_name
+        existing_trademark["-_trademark_name"], proposed_name
     )
     st.write(f"Phonetically equivalents : {condition_1C_satisfieds}")
 
     # Condition 1D: First two or more words are phonetically equivalent
     condition_1D_satisfied = first_words_phonetically_equivalent(
-        existing_trademark["trademark_name"], proposed_name
+        existing_trademark["-_trademark_name"], proposed_name
     )
 
     # Condition 1E: Proposed name is the first word of the existing trademark
     condition_1E_satisfied = (
-        existing_trademark["trademark_name"].lower().startswith(proposed_name.lower())
+        existing_trademark["-_trademark_name"].lower().startswith(proposed_name.lower())
     )
 
     # Check if any Condition 1 is satisfied
@@ -481,7 +481,7 @@ def compare_trademarks(
 
     # Condition 2: Overlap in International Class Numbers
     international_class_numbers = ast.literal_eval(
-        existing_trademark["international_class_number"]
+        existing_trademark["-_international_class_number"]
     )
 
     # Check if any class in proposed_classes is in the international_class_numbers
@@ -554,13 +554,13 @@ def compare_trademarks(
         existing_trademark["-_goods_&_services"], proposed_goods_services
     )
 
-    # Clean and standardize the trademark status
-    status = existing_trademark["status"].strip().lower()
+    # Clean and standardize the trademark -_status
+    status = existing_trademark["-_status"].strip().lower()
 
-    # Check for 'Cancelled' or 'Abandoned' status
+    # Check for 'Cancelled' or 'Abandoned' -_status
     if any(keyword in status for keyword in ["cancelled", "abandoned"]):
         conflict_grade = "Low"
-        reasoning = "The existing trademark status is 'Cancelled' or 'Abandoned.'"
+        reasoning = "The existing trademark -_status is 'Cancelled' or 'Abandoned.'"
     else:
         points = sum(
             [
@@ -619,13 +619,13 @@ def compare_trademarks(
 
     # Return results
     return {
-        "Trademark name": existing_trademark["trademark_name"],
-        "Trademark status": existing_trademark["status"],
-        "Trademark owner": existing_trademark["owner"],
-        "Trademark class Number": existing_trademark["international_class_number"],
-        "Trademark serial number": existing_trademark["serial_number"],
-        "Trademark registration number": existing_trademark["registration_number"],
-        "Trademark design phrase": existing_trademark["design_phrase"],
+        "Trademark name": existing_trademark["-_trademark_name"],
+        "Trademark -_status": existing_trademark["-_status"],
+        "Trademark -_owner": existing_trademark["-_owner"],
+        "Trademark class Number": existing_trademark["-_international_class_number"],
+        "Trademark serial number": existing_trademark["-_serial_number"],
+        "Trademark registration number": existing_trademark["-_registration_number"],
+        "Trademark design phrase": existing_trademark["-_design_phrase"],
         "conflict_grade": conflict_grade,
         "reasoning": reasoning,
     }
@@ -712,6 +712,7 @@ if uploaded_files:
         grades = ["High", "Moderate", "Name-Match", "Low"]
         st.write(extracted_pages)
         st.write(extracted_pages2)
+        seen_records = set()  # To track unique trademark records
         for extracted_text in extracted_pages:
             # st.write(extracted_text)
             prompt = f"""
@@ -803,15 +804,15 @@ if uploaded_files:
                             "content": f"""
                             Extract the following details from the provided trademark document and present them in the exact format specified:  
 
-                            "trademark_name"  
-                            "status"  
-                            "serial_number"  
-                            "international_class_number" (as a list of integers)
-                            "goods_&_services" (Goods and services are given after every international class, extract them intelligently as they may span over more than one page.)
-                            "owner"  
-                            "filed_date" (format: MMM DD, YYYY, e.g., Jun 14, 2024)   
-                            "registration_number"  
-                            "design_phrase"
+                            - Trademark Name  
+                            - Status  
+                            - Serial Number  
+                            - International Class Number (as a list of integers)
+                            - Goods & Services (Goods and services are given after every international class, extract them intelligently as they may span over more than one page.)
+                            - Owner  
+                            - Filed Date (format: MMM DD, YYYY, e.g., Jun 14, 2024)  
+                            - Registration Number  
+                            - Design phrase
 
                             Instructions:  
                             - Return the results in the following format, replacing the example data with the extracted information:
@@ -872,16 +873,19 @@ if uploaded_files:
                     if not details or "error" in details:
                         continue
                         
-                    reg_number = details.get("registration_number")
-                    serial_number = details.get("serial_number")
+                    reg_number = details.get("-_registration_number")
+                    serial_number = details.get("-_serial_number")
             
                     # Create a unique identifier for tracking
-                    #unique_id = (reg_number or "").strip(), (serial_number or "").strip()
+                    unique_id = (reg_number or "").strip(), (serial_number or "").strip()
             
                     # Skip if the record is a duplicate
-                    # if unique_id in seen_records:
-                    #     continue
-                    
+                    if unique_id in seen_records:
+                        continue
+            
+                    # Mark the record as seen
+                    seen_records.add(unique_id)
+            
                     # Compare trademarks
                     comparision_result = compare_trademarks(
                         details, proposed_name, proposed_class, proposed_goods_services
@@ -915,11 +919,11 @@ if uploaded_files:
                     row[0].text = (
                         f"{result['Trademark name']} (Class {result['Trademark class Number']})"
                     )
-                    row[1].text = result["Trademark status"]
+                    row[1].text = result["Trademark -_status"]
                     row[2].text = (
                         f"{result['Trademark serial number']} / {result['Trademark registration number']}"
                     )
-                    row[3].text = result["Trademark owner"]
+                    row[3].text = result["Trademark -_owner"]
                     row[4].text = (
                         "Design" if result["Trademark design phrase"] else "Word"
                     )
