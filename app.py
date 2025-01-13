@@ -712,7 +712,6 @@ if uploaded_files:
         grades = ["High", "Moderate", "Name-Match", "Low"]
         st.write(extracted_pages)
         st.write(extracted_pages2)
-        seen_records = set()  # To track unique trademark records
         for extracted_text in extracted_pages:
             # st.write(extracted_text)
             prompt = f"""
@@ -882,10 +881,7 @@ if uploaded_files:
                     # Skip if the record is a duplicate
                     # if unique_id in seen_records:
                     #     continue
-            
-                    # Mark the record as seen
-                    seen_records.add(unique_id)
-            
+                    
                     # Compare trademarks
                     comparision_result = compare_trademarks(
                         details, proposed_name, proposed_class, proposed_goods_services
