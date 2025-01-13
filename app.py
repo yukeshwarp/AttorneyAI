@@ -882,7 +882,7 @@ if uploaded_files:
                     if i == len(record) - 1:
                         end_page = start_page + 4
                     else:
-                        end_page = int(record[i + 1]["page-start"])
+                        end_page = int(record[i + 1]["page-start"]) - 1
             
                     document_chunk = "\n".join(extracted_pages2[start_page:end_page])
                     tasks.append(extract_trademark_details(document_chunk))
