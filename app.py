@@ -872,10 +872,9 @@ if uploaded_files:
                 for details in extracted_details:
                     if not details or "error" in details:
                         continue
-            
-                    # Get unique identifiers
-                    reg_number = details.get("registration_number")
-                    serial_number = details.get("serial_number")
+                        
+                    reg_number = details.get("-_registration_number")
+                    serial_number = details.get("-_serial_number")
             
                     # Create a unique identifier for tracking
                     unique_id = (reg_number or "").strip(), (serial_number or "").strip()
