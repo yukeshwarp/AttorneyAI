@@ -49,15 +49,15 @@ if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
 class TrademarkDetails(BaseModel):
-    -_trademark_name: str
-    -_status: str
-    -_serial_number: Optional[str] = str
-    -_international_class_number: List[int]
-    -_goods_and_services: str
-    -_owner: str
-    -_filed_date: str
-    -_registration_number: Optional[str] = None
-    -_design_phrase: Optional[str] = None
+    trademark_name: str
+    status: str
+    serial_number: Optional[str] = str
+    international_class_number: List[int]
+    goods_and_services: str
+    owner: str
+    filed_date: str
+    registration_number: Optional[str] = None
+    design_phrase: Optional[str] = None
 
     @validator("filed_date")
     def validate_filed_date(cls, value):
@@ -871,7 +871,7 @@ if uploaded_files:
             
                     # Validate the extracted details using Pydantic
                     trademark_details = TrademarkDetails(**details)
-                    return trademark_details.dict()
+                    return details
             
                 except Exception as e:
                     logging.error(f"Error extracting trademark details: {e}")
