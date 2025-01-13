@@ -116,12 +116,12 @@ def compare_trademarks2(
             2. Determine if the trademarks are likely to cause confusion based on the Trademark name such as Phonetic match, Semantic similarity and String similarity.  
             3. Return the output with Conflict Grade only as 'Name-Match' or 'No-conflict', based on the reasoning.
             4. Provide reasoning for each Conflict Grade.
-            5. Special Case: If the existing trademark status is "Cancelled" or "Abandoned," it will automatically be considered as Conflict Grade: No-conflict.  
+            5. Special Case: If the existing trademark status is "Cancelled" or "Abandoned," it will automatically be considered as No-conflict.  
            
             Output Format:
                 Existing Name: Name of the existing trademark.
                 Reasoning: Reasoning.
-                Conflict Grade: conflict-grade.
+                Conflict Grade: Name-Match/No-conflict.
         """,
         },
     ]
