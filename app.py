@@ -13,9 +13,8 @@ from openai import AzureOpenAI
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import tiktoken
-from pydantic import BaseModel, Field, ValidationError
-from typing import List, Dict, Union
-from typing import List, Dict, Union
+from pydantic import BaseModel, Field, ValidationError, validator
+from typing import List, Dict, Union, Optional
 from sentence_transformers import SentenceTransformer, util
 from fuzzywuzzy import fuzz
 from docx import Document
@@ -49,6 +48,36 @@ if "removed_documents" not in st.session_state:
 if "session_id" not in st.session_state:
     st.session_state.session_id = str(uuid.uuid4())
 
+class TrademarkDetails(BaseModel):
+    -_trademark_name: str
+    -_status: str
+    -_serial_number: Optional[str] = str
+    -_international_class_number: List[int]
+    -_goods_and_services: str
+    -_owner: str
+    -_filed_date: str
+    -_registration_number: Optional[str] = None
+    -_design_phrase: Optional[str] = None
+
+    @validator("filed_date")
+    def validate_filed_date(cls, value):
+        # Validate date format
+        from datetime import datetime
+        try:
+            datetime.strptime(value, "%b %d, %Y")
+        except ValueError:
+            raise ValueError(f"Invalid filed date format: {value}. Expected format is MMM DD, YYYY.")
+        return value
+
+    @validator("international_class_number", pre=True)
+    def validate_class_numbers(cls, value):
+        if isinstance(value, str):
+            # Convert string to list of integers
+            try:
+                return [int(num.strip()) for num in value.split(",")]
+            except ValueError:
+                raise ValueError("Invalid international class numbers. Expected a list of integers.")
+        return value
 
 st.title("AttorneyAI")
 
@@ -712,6 +741,7 @@ if uploaded_files:
         }
         st.write(extracted_pages)
         st.write(extracted_pages2)
+        seen_records = set()  # To track unique trademark records
         for extracted_text in extracted_pages:
             # st.write(extracted_text)
             prompt = f"""
@@ -792,7 +822,7 @@ if uploaded_files:
                         api_key=llm_api_key,
                         api_version="2024-10-01-preview",
                     )
-
+            
                     messages = [
                         {
                             "role": "system",
@@ -802,7 +832,7 @@ if uploaded_files:
                             "role": "user",
                             "content": f"""
                             Extract the following details from the provided trademark document and present them in the exact format specified:  
-
+            
                             - Trademark Name  
                             - Status  
                             - Serial Number  
@@ -812,18 +842,18 @@ if uploaded_files:
                             - Filed Date (format: MMM DD, YYYY, e.g., Jun 14, 2024)  
                             - Registration Number  
                             - Design phrase
-
+            
                             Instructions:  
                             - Return the results in the following format, replacing the example data with the extracted information:
                             - Ensure the output matches this format precisely.  
                             - Do not include any additional text or explanations.  
-
+            
                             Document chunk to extract from:  
                             {document_chunk}  
                         """,
                         },
                     ]
-
+            
                     loop = asyncio.get_event_loop()
                     response = await loop.run_in_executor(
                         None,
@@ -831,22 +861,22 @@ if uploaded_files:
                             model="gpt-4o-mini", messages=messages, temperature=0
                         ),
                     )
-
+            
                     extracted_text = response.choices[0].message.content
                     details = {}
                     for line in extracted_text.split("\n"):
                         if ":" in line:
                             key, value = line.split(":", 1)
-                            details[key.strip().lower().replace(" ", "_")] = (
-                                value.strip()
-                            )
-
-                    return details
-
+                            details[key.strip().lower().replace(" ", "_")] = value.strip()
+            
+                    # Validate the extracted details using Pydantic
+                    trademark_details = TrademarkDetails(**details)
+                    return trademark_details.dict()
+            
                 except Exception as e:
                     logging.error(f"Error extracting trademark details: {e}")
                     return {"error": f"Error extracting trademark details: {str(e)}"}
-
+                    
             async def parallel_extraction():
                 tasks = []
                 for i in range(len(record)):
@@ -855,32 +885,49 @@ if uploaded_files:
                         end_page = start_page + 4
                     else:
                         end_page = int(record[i + 1]["page-start"])
-
+            
                     document_chunk = "\n".join(extracted_pages2[start_page:end_page])
                     tasks.append(extract_trademark_details(document_chunk))
-
+            
                 return await asyncio.gather(*tasks)
-
+            
             async def process_trademarks():
                 extracted_details = await parallel_extraction()
-
+                
+            
                 proposed_name = "GOOD HUMOR"
                 proposed_class = "33"
                 proposed_goods_services = "ALCOHOLIC BEVERAGES"
-
+            
                 for details in extracted_details:
                     if not details or "error" in details:
                         continue
-
+            
+                    # Get unique identifiers
+                    reg_number = details.get("registration_number")
+                    serial_number = details.get("serial_number")
+            
+                    # Create a unique identifier for tracking
+                    unique_id = (reg_number or "").strip(), (serial_number or "").strip()
+            
+                    # Skip if the record is a duplicate
+                    if unique_id in seen_records:
+                        continue
+            
+                    # Mark the record as seen
+                    seen_records.add(unique_id)
+            
+                    # Compare trademarks
                     comparision_result = compare_trademarks(
                         details, proposed_name, proposed_class, proposed_goods_services
                     )
-
+            
                     conflict_grade = comparision_result.get("conflict_grade")
                     comparison_results[conflict_grade].append(comparision_result)
-
-                # Create Word document
-
+            
+                # Create Word document (not implemented here)
+            
+            # Run the processing function
             asyncio.run(process_trademarks())
 
         # Create the document in memory
